@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hands-Free Control Center</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; max-width: 1000px; width: 100%; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    .header-panel { grid-column: span 2; text-align: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 15px; }
+    .header-panel h1 { color: #1a73e8; margin: 0 0 5px 0; font-size: 28px; }
+    .header-panel p { margin: 0; color: #5f6368; font-size: 14px; }
+    .left-col, .right-col { display: flex; flex-direction: column; gap: 20px; }
+    .card { background: #ffffff; border: 1px solid #e0e0e0; padding: 20px; border-radius: 12px; }
+    .card h3 { margin-top: 0; color: #202124; border-bottom: 1px solid #f0f2f5; padding-bottom: 8px; }
+    #videoContainer { position: relative; width: 100%; height: 260px; background: #202124; border-radius: 8px; overflow: hidden; }
+    #videoFeed { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
+    #trackingOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); pointer-events: none; }
+    .btn-primary { background-color: #1a73e8; color: white; border: none; padding: 12px 24px; border-radius: 24px; cursor: pointer; font-size: 15px; font-weight: bold; width: 100%; transition: background 0.2s; }
+    .btn-primary:hover { background-color: #1557b0; }
+    .status-badge { display: inline-block; padding: 12px; border-radius: 8px; background: #e8f0fe; color: #1967d2; font-weight: bold; font-size: 14px; width: 100%; box-sizing: border-box; text-align: center; margin-top: 10px; }
+    .log-box { background: #202124; color: #34a853; font-family: 'Courier New', Courier, monospace; padding: 15px; border-radius: 8px; height: 120px; overflow-y: auto; font-size: 13px; line-height: 1.5; }
+    .command-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #3c4043; }
+    .command-list li { padding: 6px 0; border-bottom: 1px solid #f8f9fa; display: flex; justify-content: space-between; }
+    .command-list span { font-weight: bold; color: #1a73e8; }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard">
+    <div class="header-panel">
+      <h1>Hands-Free Vision & Voice Workspace</h1>
+      <p>Keep this controller dashboard open in the background to seamlessly navigate any web window.</p>
+    </div>
+
+    <div class="left-col">
+      <div class="card">
+        <h3>📹 Live Smart-Vision Feed</h3>
+        <div id="videoContainer">
+          <video id="videoFeed" autoplay playsinline muted></video>
+          <canvas id="trackingOverlay"></canvas>
+        </div>
+        <button id="listenBtn" class="btn-primary" style="margin-top: 15px;">Initialize Assistive Framework</button>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="card">
+        <h3>📡 System Telemetry</h3>
+        <div class="status-badge" id="statusText">System Matrix: Awaiting Initialization</div>
+        <p style="margin: 15px 0 5px 0; font-size: 13px; font-weight: bold; color: #5f6368;">Activity Console Output:</p>
+        <div class="log-box" id="consoleLogs">
+          [SYS LOG] Framework ready for boot deployment...<br>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🗣️ Functional Vocabulary Map</h3>
+        <ul class="command-list">
+          <li>Vertical Page Descent: <span>"Scroll Down" / Head Tilt Down</span></li>
+          <li>Vertical Page Ascent: <span>"Scroll Up" / Head Tilt Up</span></li>
+          <li>History Regression Loop: <span>"Go Back"</span></li>
+          <li>History Progression Loop: <span>"Forward"</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="permission.js"></script>
+</body>
+</html>
