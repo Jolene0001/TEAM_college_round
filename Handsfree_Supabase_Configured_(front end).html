@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Handsfree — Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#F8F9FC;--sf:#fff;--tx:#171923;--tx2:#737789;--ac:#6757E8;--ach:#5545D0;--acs:#F0EDFF;--ok:#16865C;--wn:#D99022;--er:#D94747;--bd:#E8EAF0;--sh:0 1px 2px rgba(23,25,35,.05);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#101117;--sf:#181a22;--tx:#F1F2F6;--tx2:#9a9eb2;--acs:#262247;--bd:#2a2d3a;--ac:#8576f5}}
+:root[data-theme=dark]{--bg:#101117;--sf:#181a22;--tx:#F1F2F6;--tx2:#9a9eb2;--acs:#262247;--bd:#2a2d3a;--ac:#8576f5}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--tx);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh;max-width:1440px;margin:auto}
+aside{background:var(--sf);border-right:1px solid var(--bd);padding:24px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;padding:0 8px 24px}
+.lg{width:28px;height:28px;border-radius:8px;background:var(--ac);display:grid;place-items:center;color:#fff}
+nav button{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border-radius:9px;color:var(--tx2);font-weight:500;cursor:pointer}
+nav button:hover{background:var(--bg);color:var(--tx)}nav button.on{background:var(--acs);color:var(--ac)}
+nav small{display:block;margin:20px 12px 6px;font-size:12px;color:var(--tx2)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.help{margin-top:auto}
+main{display:flex;flex-direction:column;min-width:0}
+.top{height:64px;border-bottom:1px solid var(--bd);background:var(--sf);display:flex;align-items:center;justify-content:space-between;padding:0 32px}
+.top b{font-size:15px;font-weight:600}.tr{display:flex;gap:12px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--bd);border-radius:99px;padding:4px 12px;font-size:12px;font-weight:500;background:var(--sf)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--tx2)}.pill.active .dot{background:var(--ok)}.pill.paused .dot{background:var(--wn)}
+.av{width:32px;height:32px;border-radius:50%;background:var(--acs);color:var(--ac);display:grid;place-items:center;font-weight:600;font-size:13px}
+.pg{padding:32px;display:none;flex-direction:column;gap:24px}.pg.on{display:flex}
+h1{font-size:32px;font-weight:600;margin:0;letter-spacing:-.02em;line-height:1.2}h2{font-size:20px;font-weight:600;margin:0}h3{font-size:15px;font-weight:500;margin:0}
+.sub{color:var(--tx2);font-size:15px;margin:8px 0 0}.sm{font-size:13px;color:var(--tx2)}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:20px;box-shadow:var(--sh)}
+.g{display:grid;gap:24px}.g2{grid-template-columns:2fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.col{display:flex;flex-direction:column;gap:16px}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.sp{justify-content:space-between}
+.btn{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:10px;font-weight:500;cursor:pointer;border:1px solid var(--bd);background:var(--sf);color:var(--tx);transition:background .12s}
+.btn:hover{background:var(--bg)}.btn.p{background:var(--ac);color:#fff;border-color:var(--ac)}.btn.p:hover{background:var(--ach)}
+.btn.ic{padding:9px}.btn[disabled]{opacity:.45;cursor:not-allowed}.btn:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.web{border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:#fff;color:#171923;position:relative}
+.bar{background:#F3F4F8;padding:8px 12px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--bd)}.bar i{width:10px;height:10px;border-radius:50%;background:#d5d8e2}.url{flex:1;background:#fff;border-radius:6px;padding:3px 10px;font-size:12px;color:#737789;margin-left:8px}
+.wp{padding:28px;min-height:300px;position:relative}.wp h4{font-size:22px;margin:0 0 6px}.wp p{color:#737789;margin:0 0 16px;max-width:380px}
+.tgt{position:relative;display:inline-block;padding:10px 18px;background:#6757E8;color:#fff;border-radius:9px;font-weight:500;box-shadow:0 0 0 4px #F0EDFF,0 0 0 5px #6757E8}
+.cur{position:absolute;left:150px;top:178px;width:18px;height:18px;transition:all .6s}.cur svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
+.lbl{position:absolute;right:12px;bottom:12px;font-size:12px;background:#171923;color:#fff;border-radius:6px;padding:3px 8px;opacity:.85}
+.ph{background:var(--bg);border:1px dashed var(--bd);border-radius:10px;height:120px;display:grid;place-items:center;color:var(--tx2);font-size:13px;text-align:center;padding:8px}
+.ph.big{height:300px;position:relative}.ph.big.ok{border-style:solid;border-color:var(--ok)}
+.oval{width:150px;height:200px;border:2px dashed var(--tx2);border-radius:50%;display:grid;place-items:center}.ok .oval{border:2px solid var(--ok)}
+.ban{display:flex;gap:12px;align-items:flex-start;border-radius:10px;padding:12px 16px;font-size:13px;border:1px solid}
+.ban.i{background:var(--acs);border-color:transparent}.ban.w{background:rgba(217,144,34,.1);border-color:rgba(217,144,34,.4)}.ban.e{background:rgba(217,71,71,.08);border-color:rgba(217,71,71,.35)}.ban.s{background:rgba(22,134,92,.08);border-color:rgba(22,134,92,.35)}
+.li{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px}.li:last-child{border:0}
+.badge{font-size:12px;font-weight:500;padding:2px 8px;border-radius:99px;background:var(--bg);color:var(--tx2);border:1px solid var(--bd)}.badge.ok{color:var(--ok);background:rgba(22,134,92,.08);border-color:transparent}
+.steps{display:flex;gap:8px}.st{flex:1}.st .b{height:4px;border-radius:2px;background:var(--bd);margin-bottom:8px}.st.done .b,.st.cur2 .b{background:var(--ac)}.st span{font-size:13px;color:var(--tx2)}.st.cur2 span{color:var(--tx);font-weight:500}
+.tabs{display:inline-flex;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}.tabs button{all:unset;padding:6px 14px;border-radius:7px;font-weight:500;color:var(--tx2);cursor:pointer;font-size:13px}.tabs button.on{background:var(--sf);color:var(--tx);box-shadow:var(--sh)}.tabs button:focus-visible{outline:2px solid var(--ac)}
+.tg{all:unset;width:40px;height:24px;border-radius:99px;background:#c9ccd8;position:relative;cursor:pointer;flex:none;transition:background .15s}.tg::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}.tg[aria-checked=true]{background:var(--ac)}.tg[aria-checked=true]::after{left:19px}.tg:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+input[type=range]{accent-color:var(--ac);width:200px}
+input[type=text],textarea,select{font:inherit;color:var(--tx);background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;width:100%}
+.set{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:16px 0;border-bottom:1px solid var(--bd)}.set:last-child{border:0}.set p{margin:2px 0 0;font-size:13px;color:var(--tx2)}.set .ctl{display:flex;gap:12px;align-items:center;flex:none}.val{width:48px;text-align:right;font-size:13px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.mic{width:72px;height:72px;border-radius:50%;background:var(--acs);color:var(--ac);display:grid;place-items:center;flex:none}
+.wave{display:flex;gap:4px;align-items:center;height:40px}.wave i{width:4px;background:var(--ac);border-radius:2px;height:10px;animation:w 1.1s ease-in-out infinite}.wave i:nth-child(2n){animation-delay:.2s}.wave i:nth-child(3n){animation-delay:.45s}
+@keyframes w{50%{height:34px}}.paused-w .wave i{animation:none}
+@media(prefers-reduced-motion:reduce){.wave i{animation:none}*{transition:none!important}}
+.ring{width:56px;height:56px;border-radius:50%;background:conic-gradient(var(--ac) calc(var(--p,0)*1%),var(--bd) 0);display:grid;place-items:center}.ring span{width:44px;height:44px;border-radius:50%;background:var(--sf);display:grid;place-items:center;font-size:12px;font-weight:500}
+.pop{width:360px;height:520px;background:var(--sf);border:1px solid var(--bd);border-radius:14px;box-shadow:0 8px 24px rgba(23,25,35,.12);padding:16px;display:flex;flex-direction:column;gap:12px}
+.mode{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--bd);border-radius:10px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;display:none;z-index:9}
+.tip{position:relative;display:inline-block;background:var(--tx);color:var(--bg);font-size:12px;padding:4px 8px;border-radius:6px}
+.scroll{overflow-x:auto}
+@media(max-width:900px){.app{grid-template-columns:1fr}aside{position:static;height:auto;flex-direction:row;flex-wrap:wrap;padding:12px}.logo{padding:0 8px}nav{display:flex;flex-wrap:wrap}nav small,.help{display:none}.g2,.g3{grid-template-columns:1fr}.pg{padding:16px}.top{padding:0 16px}h1{font-size:26px}.set{flex-direction:column;align-items:flex-start}}
+
+/* Supabase account layer */
+.auth-screen{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.auth-card{width:min(100%,440px);background:var(--sf);border:1px solid var(--bd);border-radius:18px;padding:28px;box-shadow:0 12px 40px rgba(23,25,35,.10)}
+.auth-brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:18px;margin-bottom:26px}
+.auth-brand .lg{width:34px;height:34px}
+.auth-card h1{font-size:27px;margin:0 0 8px}
+.auth-card .auth-sub{color:var(--tx2);margin:0 0 22px}
+.auth-field{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+.auth-field label{font-size:13px;font-weight:550}
+.auth-field input{font:inherit;color:var(--tx);background:var(--sf);border:1px solid var(--bd);border-radius:9px;padding:11px 12px;width:100%}
+.auth-actions{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.auth-error{display:none;padding:10px 12px;border-radius:9px;background:rgba(217,71,71,.08);color:var(--er);font-size:13px;margin:12px 0}
+.auth-note{font-size:12px;color:var(--tx2);margin-top:16px;line-height:1.5}
+.auth-switch{border:0;background:none;color:var(--ac);cursor:pointer;font:inherit;font-weight:600}
+.user-menu{display:flex;align-items:center;gap:10px}
+.user-email{font-size:12px;color:var(--tx2);max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auth-busy{opacity:.65;pointer-events:none}
+
+</style></head><body>
+<div class="app">
+<aside><div class="logo"><div class="lg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5a2 2 0 0 1 4 0v6M13 10V8a2 2 0 0 1 4 0v6a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-2-4a2 2 0 0 1 3-2l2 2"/></svg></div>Handsfree</div>
+<nav id="nav" aria-label="Main"></nav>
+<button class="btn help" style="border:0;color:var(--tx2)" onclick="toast('Help centre opens here (prototype)')">Help &amp; support</button></aside>
+<main>
+<div class="top"><b id="ttl">Overview</b><div class="tr"><span class="pill" id="pill"><i class="dot"></i><span id="pt">Session not started</span></span><div class="user-menu"><span class="user-email" id="userEmail">Not signed in</span><button class="btn" id="signOutBtn" onclick="hfSignOut()" style="display:none;padding:6px 10px">Sign out</button><div class="av" id="userAvatar" title="Profile">?</div></div></div></div>
+
+<section class="pg on" id="overview">
+<div><h1>Your web, within reach.</h1><p class="sub">Browse, navigate and interact using your face, hands and voice.</p></div>
+<div class="g g2">
+<div class="card col"><div class="row sp"><h2>Browser interaction</h2><span class="badge">Simulated preview</span></div>
+<div class="web"><div class="bar"><i></i><i></i><i></i><span class="url">https://northwind.example/trips</span></div>
+<div class="wp"><h4>Plan your next trip</h4><p>Compare routes, save places and book in a few steps. Hold your gaze on the button to select it.</p><span class="tgt" id="tgt">Search flights</span>
+<div class="cur" id="cur"><svg width="18" height="18" viewBox="0 0 24 24" fill="#171923" stroke="#fff" stroke-width="1.5"><path d="M4 3l16 7-7 2-2 7z"/></svg></div><span class="lbl" id="lbl">Idle — start a session to simulate</span></div></div>
+<div class="card" style="background:var(--bg);box-shadow:none"><h3>Quick controls</h3><div class="row" style="margin-top:12px"><button class="btn p" id="bs" onclick="sess('active')">▶ Start Session</button><button class="btn" id="bp" onclick="sess('paused')" disabled>❚❚ Pause Controls</button><button class="btn" onclick="go('calibration')">↻ Recalibrate</button></div></div></div>
+<div class="col">
+<div class="card col"><div class="row sp"><h3>Face tracking</h3><span class="badge" data-st>Not started</span></div><div class="ph">Camera preview placeholder</div><div class="row sp"><span class="sm">Last calibrated: not yet</span><button class="btn" onclick="go('calibration')">Calibrate</button></div></div>
+<div class="card col"><div class="row sp"><h3>Hand tracking</h3><span class="badge" data-st>Not started</span></div><div class="ph" style="height:90px">Gesture preview placeholder</div></div>
+<div class="card col"><div class="row sp"><h3>Voice control</h3><span class="badge" data-st>Not started</span></div><div class="sm" id="vc">Example command: “Scroll down”</div></div>
+</div></div>
+<div class="card"><h2 style="margin-bottom:8px">Recent activity</h2><div id="act"><div class="li"><span>Scrolled down</span><span class="sm">Sample</span></div><div class="li"><span>Navigation requested</span><span class="sm">Sample</span></div><div class="li"><span>Dwell click on “Search flights”</span><span class="sm">Sample</span></div></div></div>
+</section>
+
+<section class="pg" id="calibration">
+<div><h1>Let’s make it yours.</h1><p class="sub">A quick setup helps Handsfree adapt to your movements and environment.</p></div>
+<div class="steps" id="steps"></div>
+<div class="g g2"><div class="card col"><div class="row sp"><h2 id="ct">Camera</h2><div class="tabs" id="cst" aria-label="Preview state (design states)"></div></div>
+<div id="cb"></div><div class="ph big" id="cp"><div class="oval"><span class="sm" id="cl">Place your face here</span></div></div>
+<div class="row sp"><button class="btn" onclick="toast('Setup skipped — you can resume from Calibration')">Skip for now</button><button class="btn p" id="cc" onclick="cont()">Continue</button></div></div>
+<div class="col"><div class="card col"><h3>Camera permission</h3><div class="row"><span class="badge" id="perm">Required</span></div><p class="sm" style="margin:0">Video stays on your device. Handsfree never records or uploads it.</p></div>
+<div class="card col"><h3>Positioning tips</h3><div class="sm">• Sit about an arm’s length away.<br>• Face a window or soft lamp.<br>• Keep your head centred in the oval.</div></div>
+<div class="card col"><h3>Sensitivity</h3><div class="row"><input type="range" min="1" max="10" value="5" aria-label="Sensitivity" oninput="sv.textContent=this.value"><span class="val" id="sv">5</span></div></div></div></div>
+</section>
+
+<section class="pg" id="voice">
+<div><h1>Speak naturally.</h1><p class="sub">Use simple commands to browse without touching your keyboard or mouse.</p></div>
+<div class="card row" id="mp" style="gap:24px"><div class="mic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg></div>
+<div style="flex:1;min-width:200px"><div class="row"><h2 id="ls">Listening (simulated)</h2></div><div class="wave" id="wv"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="sm">Sample transcript — mock recognition, not live speech:</div><div style="font-size:18px;font-weight:500;margin-top:4px">“Scroll down.”</div></div>
+<button class="btn p" id="vb" onclick="vt()">Stop listening</button></div>
+<div class="g g2"><div class="card col"><div class="row sp"><h2>Command reference</h2><div style="width:240px"><input type="text" id="q" placeholder="Search commands" aria-label="Search commands" oninput="rc()"></div></div><div class="tabs" id="vt2"></div><div id="cl2"></div></div>
+<div class="col"><div class="card col"><h3>Dictation preview</h3><textarea id="dt" rows="4">Hi Sam, I’ll send the itinerary tonight.</textarea><div class="row"><button class="btn p" onclick="toast('Text confirmed — would be inserted into the page')">Confirm</button><button class="btn" onclick="dt.value='';toast('Dictation discarded')">Discard</button></div></div>
+<div class="ban i"><span>🔒</span><span>The microphone is used only while listening is on. Audio is processed on your device, and you can stop at any time by saying “Stop listening”. Examples here are mock recognitions.</span></div></div></div>
+</section>
+
+<section class="pg" id="settings">
+<div><h1>Make it comfortable.</h1><p class="sub">Adjust the experience to suit your movement and preferences.</p></div>
+<div class="g g2"><div class="card" id="sl"></div>
+<div class="col"><div class="card col"><h3>Cursor interaction preview</h3><p class="sm" style="margin:0">Hover or focus the target to start the dwell countdown. Move away to cancel.</p>
+<div class="row" style="gap:16px"><div class="ring" id="rg"><span id="rt">—</span></div><button class="btn p" id="dw" onmouseenter="dwS()" onmouseleave="dwC()" onfocus="dwS()" onblur="dwC()" onclick="dwD()">Open menu</button></div><div class="ban i" id="dm">Target highlighted when you hover.</div></div>
+<div class="row"><button class="btn" onclick="rst()">Reset to defaults</button><button class="btn p" onclick="toast('Preferences saved')">Save preferences</button></div></div></div>
+</section>
+
+<section class="pg" id="popup">
+<div><h1>Extension popup</h1><p class="sub">360 × 520, scannable without scrolling.</p></div>
+<div class="scroll"><div class="pop"><div class="row sp"><div class="row" style="gap:8px"><div class="lg" style="width:24px;height:24px;border-radius:7px"></div><b>Handsfree</b></div><span class="pill" id="pp"><i class="dot"></i><span>Off</span></span></div>
+<div class="mode"><div><b>Enable Handsfree</b><div class="sm">Master switch</div></div><button class="tg" role="switch" aria-checked="false" aria-label="Enable" id="me" onclick="pm(this)"></button></div>
+<div class="mode"><span>Head</span><button class="tg sub2" role="switch" aria-checked="true" aria-label="Head" onclick="tg(this)"></button></div>
+<div class="mode"><span>Hands</span><button class="tg sub2" role="switch" aria-checked="false" aria-label="Hands" onclick="tg(this)"></button></div>
+<div class="mode"><span>Voice</span><button class="tg sub2" role="switch" aria-checked="true" aria-label="Voice" onclick="tg(this)"></button></div>
+<div class="sm" id="ps">Session: not running</div>
+<button class="btn p" style="justify-content:center" id="pb" onclick="pause()" disabled>❚❚ Pause</button>
+<div class="row"><button class="btn" style="flex:1;justify-content:center" onclick="go('calibration')">Calibrate</button><button class="btn" style="flex:1;justify-content:center" onclick="go('settings')">Settings</button></div>
+<div class="sm" style="margin-top:auto;text-align:center">Camera and mic stay off until you enable a mode.</div></div></div>
+</section>
+
+<section class="pg" id="components">
+<div><h1>Component library</h1><p class="sub">Reusable pieces and their states, styled with one set of tokens.</p></div>
+<div class="card col"><h3>Buttons</h3><div class="row"><button class="btn p">Primary</button><button class="btn">Secondary</button><button class="btn ic" aria-label="Settings">⚙</button><button class="btn p" disabled>Disabled</button><button class="btn p" style="outline:2px solid var(--ac);outline-offset:2px">Focus</button></div>
+<h3>Status indicators</h3><div class="row"><span class="pill active"><i class="dot"></i>Active</span><span class="pill paused"><i class="dot"></i>Paused</span><span class="pill"><i class="dot"></i>Idle</span></div>
+<h3>Toggle, slider, input, tabs</h3><div class="row"><button class="tg" role="switch" aria-checked="true" aria-label="On" onclick="tg(this)"></button><button class="tg" role="switch" aria-checked="false" aria-label="Off" onclick="tg(this)"></button><input type="range" aria-label="Slider"><div style="width:200px"><input type="text" placeholder="Search"></div><div class="tabs"><button class="on">One</button><button>Two</button></div></div>
+<h3>Progress, tooltip, toast</h3><div class="row"><div class="steps" style="width:240px"><div class="st done"><div class="b"></div></div><div class="st cur2"><div class="b"></div></div><div class="st"><div class="b"></div></div></div><span class="tip">Say “Click”</span><button class="btn" onclick="toast('Calibration saved')">Show toast</button></div>
+<h3>Banners</h3><div class="ban w">Poor lighting — try facing a window.</div><div class="ban e">Camera blocked — allow access in your browser.</div><div class="ban s">Calibration complete.</div>
+<h3>Empty state</h3><div class="ph">No activity yet — start a session to see actions here.</div></div>
+</section>
+</main></div>
+
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-brand"><div class="lg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5a2 2 0 0 1 4 0v6M13 10V8a2 2 0 0 1 4 0v6a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-2-4a2 2 0 0 1 3-2l2 2"/></svg></div>Handsfree</div>
+    <h1 id="authTitle">Welcome back</h1>
+    <p class="auth-sub" id="authSubtitle">Sign in to sync your accessibility preferences.</p>
+    <div class="auth-error" id="authError" role="alert"></div>
+    <form id="authForm">
+      <div class="auth-field" id="nameField" style="display:none">
+        <label for="authName">Display name</label>
+        <input id="authName" name="name" type="text" autocomplete="name" placeholder="Your name" maxlength="80">
+      </div>
+      <div class="auth-field">
+        <label for="authEmail">Email address</label>
+        <input id="authEmail" name="email" type="email" autocomplete="email" required placeholder="you@example.com">
+      </div>
+      <div class="auth-field">
+        <label for="authPassword">Password</label>
+        <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters">
+      </div>
+      <div class="auth-actions">
+        <button class="btn p" id="authSubmit" type="submit" style="justify-content:center">Sign in</button>
+        <button class="auth-switch" id="authSwitch" type="button">New to Handsfree? Create an account</button>
+      </div>
+    </form>
+    <p class="auth-note">Your account stores your profile and accessibility preferences only. Webcam footage and microphone recordings are not uploaded or stored by this app.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/*
+ * HANDSFREE SUPABASE SETUP
+ * 1) Replace both placeholders below with your Supabase Project URL and publishable key.
+ * 2) Never put a service_role/secret key in this file.
+ * 3) Serve this file from localhost or HTTPS, not file://, for auth redirects/session behavior.
+ */
+const SUPABASE_URL = "https://bhpqrgepzfphravadakv.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_nFH3Vnqelx2tC5LUzq3kpw_qAK0au28";
+const hfSupabaseConfigured =
+  !SUPABASE_URL.includes("PASTE_") &&
+  !SUPABASE_PUBLISHABLE_KEY.includes("PASTE_") &&
+  !!window.supabase;
+const db = hfSupabaseConfigured
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
+  : null;
+
+// Define the shared DOM helper before any authentication code uses it.
+const $ = id => document.getElementById(id);
+
+let hfAuthMode = "signin";
+let hfCurrentUser = null;
+function hfShowAuthError(message) {
+  const el = $("authError");
+  el.textContent = message;
+  el.style.display = "block";
+}
+function hfClearAuthError() {
+  $("authError").textContent = "";
+  $("authError").style.display = "none";
+}
+function hfSetAuthMode(mode) {
+  hfAuthMode = mode;
+  hfClearAuthError();
+  const signup = mode === "signup";
+  $("authTitle").textContent = signup ? "Create your account" : "Welcome back";
+  $("authSubtitle").textContent = signup
+    ? "Create an account to keep your preferences in sync."
+    : "Sign in to sync your accessibility preferences.";
+  $("nameField").style.display = signup ? "flex" : "none";
+  $("authName").required = signup;
+  $("authPassword").autocomplete = signup ? "new-password" : "current-password";
+  $("authSubmit").textContent = signup ? "Create account" : "Sign in";
+  $("authSwitch").textContent = signup
+    ? "Already have an account? Sign in"
+    : "New to Handsfree? Create an account";
+}
+$("authSwitch").addEventListener("click", () => hfSetAuthMode(hfAuthMode === "signin" ? "signup" : "signin"));
+
+async function hfEnsureUserData(user, displayName = "") {
+  const profilePayload = {
+    id: user.id,
+    display_name: displayName || user.user_metadata?.display_name || "",
+    updated_at: new Date().toISOString()
+  };
+  const { error: profileError } = await db.from("profiles").upsert(profilePayload, { onConflict: "id" });
+  if (profileError) throw profileError;
+
+  // ignoreDuplicates prevents overwriting preferences that already exist
+  const { error: prefError } = await db.from("user_preferences").upsert(
+    { user_id: user.id },
+    { onConflict: "user_id", ignoreDuplicates: true }
+  );
+  if (prefError) throw prefError;
+}
+async function hfSignIn(email, password) {
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  await hfEnsureUserData(data.user);
+  await hfLoadPreferences();
+  hfEnterApp(data.user);
+}
+async function hfSignUp(email, password, displayName) {
+  const { data, error } = await db.auth.signUp({
+    email, password,
+    options: { data: { display_name: displayName } }
+  });
+  if (error) throw error;
+  if (data.session && data.user) {
+    await hfEnsureUserData(data.user, displayName);
+    await hfLoadPreferences();
+    hfEnterApp(data.user);
+  } else {
+    hfShowAuthError("Account created. Check your email to confirm it, then return here and sign in.");
+    hfSetAuthMode("signin");
+  }
+}
+function hfEnterApp(user) {
+  hfCurrentUser = user;
+  $("authScreen").style.display = "none";
+  $("userEmail").textContent = user.email || "Signed in";
+  $("userAvatar").textContent = (user.user_metadata?.display_name || user.email || "?").trim().charAt(0).toUpperCase();
+  $("signOutBtn").style.display = "inline-flex";
+}
+async function hfSignOut() {
+  if (!db) return;
+  const { error } = await db.auth.signOut();
+  if (error) { toast(error.message); return; }
+  hfCurrentUser = null;
+  $("authScreen").style.display = "flex";
+  $("userEmail").textContent = "Not signed in";
+  $("userAvatar").textContent = "?";
+  $("signOutBtn").style.display = "none";
+  hfSetAuthMode("signin");
+  toast("Signed out");
+}
+$("authForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  hfClearAuthError();
+  if (!hfSupabaseConfigured) {
+    hfShowAuthError("Supabase is not configured yet. Add your Project URL and publishable key in this HTML file, then reload.");
+    return;
+  }
+  const email = $("authEmail").value.trim();
+  const password = $("authPassword").value;
+  const name = $("authName").value.trim();
+  $("authSubmit").disabled = true;
+  $("authSubmit").textContent = hfAuthMode === "signup" ? "Creating account…" : "Signing in…";
+  try {
+    if (hfAuthMode === "signup") await hfSignUp(email, password, name);
+    else await hfSignIn(email, password);
+  } catch (error) {
+    hfShowAuthError(error?.message || "Something went wrong. Please try again.");
+  } finally {
+    $("authSubmit").disabled = false;
+    $("authSubmit").textContent = hfAuthMode === "signup" ? "Create account" : "Sign in";
+  }
+});
+
+async function hfLoadPreferences() {
+  if (!db || !hfCurrentUser && !(await db.auth.getUser()).data.user) return;
+  const user = hfCurrentUser || (await db.auth.getUser()).data.user;
+  if (!user) return;
+  const { data, error } = await db.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle();
+  if (error) throw error;
+  if (!data) return;
+  const ranges = [...$("sl").querySelectorAll('input[type="range"]')];
+  const toggles = [...$("sl").querySelectorAll(".tg")];
+  const vals = [data.head_sensitivity, data.cursor_smoothing, Math.round(Number(data.dwell_duration) * 10), data.gesture_sensitivity];
+  ranges.forEach((input, i) => {
+    input.value = vals[i];
+    input.dispatchEvent(new Event("input"));
+  });
+  const flags = [data.voice_confirmation, data.accidental_activation_protection, data.visual_feedback, data.reduced_motion];
+  toggles.forEach((toggle, i) => toggle.setAttribute("aria-checked", String(!!flags[i])));
+}
+async function hfSavePreferences() {
+  if (!db || !hfCurrentUser) {
+    toast("Sign in to save preferences");
+    return;
+  }
+  const ranges = [...$("sl").querySelectorAll('input[type="range"]')];
+  const toggles = [...$("sl").querySelectorAll(".tg")];
+  const payload = {
+    user_id: hfCurrentUser.id,
+    head_sensitivity: Number(ranges[0].value),
+    cursor_smoothing: Number(ranges[1].value),
+    dwell_duration: Number(ranges[2].value) / 10,
+    gesture_sensitivity: Number(ranges[3].value),
+    voice_confirmation: toggles[0].getAttribute("aria-checked") === "true",
+    accidental_activation_protection: toggles[1].getAttribute("aria-checked") === "true",
+    visual_feedback: toggles[2].getAttribute("aria-checked") === "true",
+    reduced_motion: toggles[3].getAttribute("aria-checked") === "true",
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await db.from("user_preferences").upsert(payload, { onConflict: "user_id" });
+  if (error) throw error;
+  toast("Preferences saved to your account");
+}
+function hfInitAuth() {
+  if (!hfSupabaseConfigured) {
+    hfShowAuthError("Setup needed: add your Supabase Project URL and publishable key to this HTML file.");
+    return;
+  }
+  db.auth.getSession().then(async ({ data, error }) => {
+    if (error) { hfShowAuthError(error.message); return; }
+    if (data.session?.user) {
+      try {
+        hfCurrentUser = data.session.user;
+        await hfEnsureUserData(hfCurrentUser);
+        await hfLoadPreferences();
+        hfEnterApp(hfCurrentUser);
+      } catch (e) {
+        hfShowAuthError(e.message || "Could not load your account data.");
+      }
+    }
+  }).catch(e => hfShowAuthError(e.message || "Could not restore your session."));
+}
+hfSetAuthMode("signin");
+const pages=[["overview","Overview"],["browser","Browser"],["voice","Voice & Commands"],["calibration","Calibration"],["settings","Settings"],["popup","Extension popup"],["components","Components"]];
+function nav(){$("nav").innerHTML=pages.map(([k,n],i)=>(i==5?"<small>Design</small>":"")+`<button data-k="${k}" onclick="go('${k}')">${n}</button>`).join("")}nav();
+function go(k){if(k=="browser"){toast("Browser preview lives on Overview");k="overview"}document.querySelectorAll(".pg").forEach(p=>p.classList.toggle("on",p.id==k));document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.k==k));$("ttl").textContent=(pages.find(p=>p[0]==k)||[])[1];scrollTo(0,0)}go("overview");
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(tt);tt=setTimeout(()=>t.style.display="none",2200)}
+function log(m){$("act").insertAdjacentHTML("afterbegin",`<div class="li"><span>${m}</span><span class="sm">Just now</span></div>`)}
+let S="idle",ci;function sess(s){S=s;const p=$("pill");p.className="pill "+s;$("pt").textContent=s=="active"?"Simulated session active":s=="paused"?"Controls paused":"Session not started";document.querySelectorAll("[data-st]").forEach(e=>{e.textContent=s=="active"?"Simulated":s=="paused"?"Paused":"Not started";e.className="badge"+(s=="active"?" ok":"")});$("bp").disabled=s=="idle";$("bp").textContent=s=="paused"?"▶ Resume":"❚❚ Pause Controls";$("bp").onclick=()=>sess(s=="paused"?"active":"paused");$("bs").textContent=s=="idle"?"▶ Start Session":"■ End Session";$("bs").onclick=()=>sess(s=="idle"?"active":"idle");if(s=="idle"){$("bs").onclick=()=>sess("active");$("bs").textContent="▶ Start Session"}else{$("bs").onclick=()=>sess("idle")}$("lbl").textContent=s=="active"?"Simulated — no camera or mic in use":s=="paused"?"Paused":"Idle — start a session to simulate";$("vc").textContent=s=="active"?"Simulated: “Scroll down”":s=="paused"?"Paused":"Example command: “Scroll down”";clearInterval(ci);const c=$("cur");if(s=="active"){log("Session started (simulated)");let f=0;ci=setInterval(()=>{f=!f;c.style.left=f?"90px":"150px";c.style.top=f?"185px":"130px"},1500)}if(s=="paused")log("Controls paused")}
+const cs=[["Permission required","w","Camera access is needed. Allow it in your browser to continue.","Allow camera"],["Camera ready","s","Camera ready. Your face is centred.","Continue"],["Poor lighting","w","It’s a little dark. Try facing a window or turning on a lamp.","Continue"],["Face not detected","e","We can’t see your face. Move closer and look at the screen.","Try again"],["Complete","s","All set — Handsfree is adapted to you.","Finish"]],stn=["Camera","Face tracking","Hand gestures","Voice setup"];let cst=1,cstep=0;
+function cr(){$("cst").innerHTML=cs.map((s,i)=>`<button class="${i==cst?"on":""}" onclick="cst=${i};cr()">${s[0]}</button>`).join("");$("steps").innerHTML=stn.map((n,i)=>`<div class="st ${i<cstep||cst==4?"done":i==cstep?"cur2":""}"><div class="b"></div><span>${i+1}. ${n}</span></div>`).join("");const s=cs[cst];$("cb").innerHTML=`<div class="ban ${s[1]}">${s[2]}</div>`;$("cp").className="ph big"+(cst==1||cst==4?" ok":"");$("cl").textContent=cst==3?"No face":cst==4?"✓ Done":"Place your face here";$("ct").textContent=stn[cstep];$("cc").textContent=cstep==3?"Finish":"Continue";$("perm").textContent=cst==0?"Required":"Granted";$("perm").className="badge"+(cst==0?"":" ok")}
+function cont(){if(cstep<3){cstep++;cst=1}else{cst=4;toast("Calibration complete")}cr()}cr();
+const cmds={Navigation:["Go back","Open a new tab","Go to address bar"],Scrolling:["Scroll down","Scroll up","Scroll to top"],Clicking:["Click","Double click","Right click"],Dictation:["Start typing","Stop typing","Stop listening"]};let vc="Navigation";
+function rc(){$("vt2").innerHTML=Object.keys(cmds).map(k=>`<button class="${k==vc?"on":""}" onclick="vc='${k}';rc()">${k}</button>`).join("");const q=$("q").value.toLowerCase(),l=q?Object.values(cmds).flat().filter(c=>c.toLowerCase().includes(q)):cmds[vc];$("cl2").innerHTML=l.length?l.map(c=>`<div class="li"><span>“${c}”</span><span class="badge">Voice</span></div>`).join(""):`<div class="ph">No commands match “${q}”.</div>`}rc();
+let vl=1;function vt(){vl=!vl;$("ls").textContent=vl?"Listening (simulated)":"Not listening";$("vb").textContent=vl?"Stop listening":"Start listening";$("mp").classList.toggle("paused-w",!vl)}
+const SET=[["Head tracking sensitivity","How far your head moves the cursor.",["r",6,"/10"]],["Cursor smoothing","Reduces small shakes.",["r",5,"/10"]],["Dwell-to-click duration","How long to hold before a click.",["r",12,"×0.1s",5,30]],["Gesture sensitivity","How easily gestures are recognised.",["r",5,"/10"]],["Voice command confirmation","Confirm before risky commands.",["t",1]],["Accidental activation protection","Ignore brief or unclear input.",["t",1]],["Visual feedback","Highlight targets and show countdowns.",["t",1]],["Reduced motion","Minimise animation.",["t",0]]];
+let dwell=1.2;$("sl").innerHTML=SET.map((s,i)=>`<div class="set"><div><h3>${s[0]}</h3><p>${s[1]}</p></div><div class="ctl">${s[2][0]=="r"?`<input type="range" min="${s[2][3]||1}" max="${s[2][4]||10}" value="${s[2][1]}" aria-label="${s[0]}" oninput="sd(this,${i},'${s[2][2]}')"><span class="val" id="v${i}">${i==2?"1.2s":s[2][1]+s[2][2]}</span>`:`<button class="tg" role="switch" aria-checked="${!!s[2][1]}" aria-label="${s[0]}" onclick="tg(this)"></button>`}</div></div>`).join("");
+function sd(e,i,u){if(i==2){dwell=e.value/10;$("v2").textContent=dwell.toFixed(1)+"s"}else $("v"+i).textContent=e.value+u}
+function rst(){go("settings");$("sl").querySelectorAll("input").forEach((e,i)=>{e.value=SET.filter(s=>s[2][0]=="r")[i][2][1];e.oninput()});$("sl").querySelectorAll(".tg").forEach((e,i)=>e.setAttribute("aria-checked",!!SET.filter(s=>s[2][0]=="t")[i][2][1]));toast("Defaults restored")}
+function tg(e){e.setAttribute("aria-checked",e.getAttribute("aria-checked")!="true")}
+let dt2,dp;function dwS(){$("dm").textContent="Target highlighted — hold to click, move away to cancel.";dp=0;clearInterval(dt2);dt2=setInterval(()=>{dp+=100/(dwell*10);$("rg").style.setProperty("--p",Math.min(dp,100));$("rt").textContent=Math.max(0,(dwell*(1-dp/100))).toFixed(1)+"s";if(dp>=100){clearInterval(dt2);dwD()}},100)}
+function dwC(){clearInterval(dt2);$("rg").style.setProperty("--p",0);$("rt").textContent="—";if(dp<100)$("dm").textContent="Cancelled — no click was sent."}
+function dwD(){clearInterval(dt2);dp=100;$("rg").style.setProperty("--p",100);$("rt").textContent="✓";$("dm").className="ban s";$("dm").textContent="Click confirmed (simulated).";setTimeout(()=>{$("dm").className="ban i"},2500)}
+let pa=0;function pm(e){tg(e);const on=e.getAttribute("aria-checked")=="true";$("pp").className="pill "+(on?"active":"");$("pp").lastChild.textContent=on?"On":"Off";$("ps").textContent=on?"Session: simulated, running":"Session: not running";$("pb").disabled=!on;$("pb").textContent="❚❚ Pause";pa=0}
+function pause(){pa=!pa;$("pb").textContent=pa?"▶ Resume":"❚❚ Pause";$("pp").className="pill "+(pa?"paused":"active");$("pp").lastChild.textContent=pa?"Paused":"On";$("ps").textContent=pa?"Session: paused":"Session: simulated, running"}
+
+// Wire the existing settings button to cloud persistence.
+document.querySelectorAll('button[onclick*="Preferences saved"]').forEach(btn => {
+  btn.setAttribute("onclick", "hfSavePreferences().catch(e => toast(e.message || 'Could not save preferences'))");
+});
+// Initialize authentication only after the existing UI and settings controls are created.
+if (hfSupabaseConfigured) {
+  db.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_OUT") {
+      hfCurrentUser = null;
+      $("authScreen").style.display = "flex";
+      $("signOutBtn").style.display = "none";
+      $("userEmail").textContent = "Not signed in";
+      $("userAvatar").textContent = "?";
+    }
+  });
+}
+hfInitAuth();
+</script></body></html>
