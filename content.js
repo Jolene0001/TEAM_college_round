@@ -1,113 +1,89 @@
 (function() {
-  if (window.hasHandsFreeRun) return;
-  window.hasHandsFreeRun = true;
+  if (window.hasHandsFreeRunActiveGlobal) return;
+  window.hasHandsFreeRunActiveGlobal = true;
 
-  let localStream = null;
-  let trackingActive = false;
-  let currentX = 0;
-  let currentY = 0;
-  let pointer = null;
-  let recognition = null;
+  window.hfPointerEl = null;
+  window.hfLastKnownX = 0;
+  window.hfLastKnownY = 0;
+  var trackingActive = false;
+  var localStream = null;
+  var recognition = null;
 
   chrome.runtime.onMessage.addListener((request) => {
-    if (request.action === "LAUNCH_HANDS_FREE") {
-      injectConsentOverlay();
+    if (request.action === "LAUNCH_SYSTEM") {
+      injectFloatingWorkspace();
     }
   });
 
-  function injectConsentOverlay() {
-    if (document.getElementById('hfConsentOverlay')) return;
+  async function injectFloatingWorkspace() {
+    if (document.getElementById('hfWidgetContainer')) return;
 
-    const overlay = document.createElement('div');
-    overlay.id = 'hfConsentOverlay';
-    overlay.style.position = 'fixed';
-    overlay.style.top = '20px';
-    overlay.style.left = '50%';
-    overlay.style.transform = 'translateX(-50%)';
-    overlay.style.backgroundColor = '#ffffff';
-    overlay.style.border = '3px solid #1a73e8';
-    overlay.style.borderRadius = '12px';
-    overlay.style.padding = '15px 25px';
-    overlay.style.boxShadow = '0 10px 30px rgba(0,0,0,0.15)';
-    overlay.style.zIndex = '999999';
-    overlay.style.textAlign = 'center';
-    overlay.style.fontFamily = 'Arial, sans-serif';
-
-    const text = document.createElement('p');
-    text.innerText = "🤖 Hands-Free Interface Ready! Click below to initialize voice engine controls.";
-    text.style.margin = '0 0 12px 0';
-    text.style.color = '#3c4043';
-    text.style.fontWeight = 'bold';
-    text.style.fontSize = '14px';
-
-    const button = document.createElement('button');
-    button.innerText = "Connect Microphone & Launch";
-    button.style.backgroundColor = '#1a73e8';
-    button.style.color = '#ffffff';
-    button.style.border = 'none';
-    button.style.padding = '8px 18px';
-    button.style.borderRadius = '20px';
-    button.style.cursor = 'pointer';
-    button.style.fontWeight = 'bold';
-    button.style.fontSize = '13px';
-
-    button.addEventListener('click', () => {
-      overlay.remove();
-      initializeAllInOneSystem();
-    });
-
-    overlay.appendChild(text);
-    overlay.appendChild(button);
-    document.body.appendChild(overlay);
-  }
-
-  async function initializeAllInOneSystem() {
-    if (document.getElementById('hfVideoContainer')) return;
-
-    const container = document.createElement('div');
-    container.id = 'hfVideoContainer';
+    var container = document.createElement('div');
+    container.id = 'hfWidgetContainer';
     container.style.position = 'fixed';
     container.style.bottom = '20px';
     container.style.right = '20px';
-    container.style.width = '160px';
-    container.style.height = '120px';
+    container.style.width = '180px';
+    container.style.height = '170px';
     container.style.backgroundColor = '#202124';
-    container.style.borderRadius = '12px';
-    container.style.border = '3px solid #1a73e8';
-    container.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+    container.style.border = '4px solid #9c27b0';
+    container.style.borderRadius = '14px';
+    container.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
     container.style.zIndex = '999998';
     container.style.overflow = 'hidden';
+    container.style.fontFamily = 'Arial, sans-serif';
 
-    const video = document.createElement('video');
-    video.id = 'hfVideoFeed';
+    var header = document.createElement('div');
+    header.innerText = "📹 HANDS-FREE TRACKER ACTIVE";
+    header.style.color = '#ffffff';
+    header.style.backgroundColor = '#9c27b0';
+    header.style.fontSize = '9px';
+    header.style.fontWeight = 'bold';
+    header.style.textAlign = 'center';
+    header.style.padding = '5px 0';
+
+    var video = document.createElement('video');
+    video.id = 'hfWidgetVideo';
     video.autoplay = true;
     video.playsInline = true;
     video.muted = true;
     video.style.width = '100%';
-    video.style.height = '100%';
+    video.style.height = '110px';
     video.style.transform = 'scaleX(-1)';
     video.style.objectFit = 'cover';
 
-    const canvas = document.createElement('canvas');
-    canvas.id = 'hfOverlay';
+    var canvas = document.createElement('canvas');
+    canvas.id = 'hfWidgetCanvas';
     canvas.style.position = 'absolute';
-    canvas.style.top = '0';
+    canvas.style.top = '18px';
     canvas.style.left = '0';
     canvas.style.width = '100%';
-    canvas.style.height = '100%';
+    canvas.style.height = '110px';
     canvas.style.transform = 'scaleX(-1)';
     canvas.style.pointerEvents = 'none';
 
+    var statusBanner = document.createElement('div');
+    statusBanner.id = 'hfStatusBanner';
+    statusBanner.innerText = "🎙️ Listening for Down / Up / Yes...";
+    statusBanner.style.color = '#34a853';
+    statusBanner.style.backgroundColor = '#ffffff';
+    statusBanner.style.fontSize = '9px';
+    statusBanner.style.fontWeight = 'bold';
+    statusBanner.style.textAlign = 'center';
+    statusBanner.style.padding = '4px 0';
+
+    container.appendChild(header);
     container.appendChild(video);
     container.appendChild(canvas);
+    container.appendChild(statusBanner);
     document.body.appendChild(container);
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: { width: 160, height: 120 }
+        video: { width: 180, height: 110 }
       });
       video.srcObject = localStream;
 
@@ -115,19 +91,19 @@
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         trackingActive = true;
-        requestAnimationFrame(processFrame);
+        requestAnimationFrame(runTrackingFrameLoop);
       };
 
-      function processFrame() {
+      function runTrackingFrameLoop() {
         if (!trackingActive) return;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = frame.data;
+        var frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var data = frame.data;
 
-        let totalX = 0, totalY = 0, count = 0;
-        for (let i = 0; i < data.length; i += 8) {
-          if (data[i] > 190 && data[i+1] > 190 && data[i+2] > 150) {
-            const idx = i / 4;
+        var totalX = 0, totalY = 0, count = 0;
+        for (var i = 0; i < data.length; i += 8) {
+          if (data[i] > 190 && data[i+1] > 190 && data[i+2] > 140) {
+            var idx = i / 4;
             totalX += idx % canvas.width;
             totalY += Math.floor(idx / canvas.width);
             count++;
@@ -135,43 +111,51 @@
         }
 
         if (count > 8) {
-          const cx = totalX / count;
-          const cy = totalY / count;
-          currentX = Math.round((1 - (cx / canvas.width)) * window.innerWidth);
-          currentY = Math.round((cy / canvas.height) * window.innerHeight);
-          updateVirtualPointer(currentX, currentY);
+          var cx = totalX / count;
+          var cy = totalY / count;
+
+          window.hfLastKnownX = Math.round((1 - (cx / canvas.width)) * window.innerWidth);
+          window.hfLastKnownY = Math.round((cy / canvas.height) * window.innerHeight);
+
+          updateLivePointer(window.hfLastKnownX, window.hfLastKnownY);
         }
-        requestAnimationFrame(processFrame);
+        requestAnimationFrame(runTrackingFrameLoop);
       }
 
-      launchVoiceEngine();
+      launchTabVoiceEngine();
 
     } catch (err) {
-      alert("Hardware access failed. Please check extension permissions.");
+      console.error(err);
+      container.remove();
+      alert("Hardware initialization prompt aborted. Reset permissions.");
     }
   }
 
-  function updateVirtualPointer(x, y) {
-    if (!pointer) {
-      pointer = document.createElement('div');
-      pointer.id = 'handsFreePointer';
-      pointer.style.position = 'fixed';
-      pointer.style.width = '30px';
-      pointer.style.height = '30px';
-      pointer.style.backgroundColor = 'rgba(156, 39, 176, 0.9)'; 
-      pointer.style.border = '4px solid white';
-      pointer.style.borderRadius = '50%';
-      pointer.style.zIndex = '999999';
-      pointer.style.pointerEvents = 'none';
-      pointer.style.boxShadow = '0 0 15px rgba(0,0,0,0.4)';
-      pointer.style.transition = 'left 0.02s linear, top 0.02s linear';
-      document.body.appendChild(pointer);
+  function updateLivePointer(x, y) {
+    if (!window.hfPointerEl) {
+      window.hfPointerEl = document.createElement('div');
+      window.hfPointerEl.id = 'handsFreePointerGlobal';
+      window.hfPointerEl.style.position = 'fixed';
+      window.hfPointerEl.style.width = '30px';
+      window.hfPointerEl.style.height = '30px';
+      window.hfPointerEl.style.backgroundColor = 'rgba(156, 39, 176, 0.9)'; 
+      window.hfPointerEl.style.border = '4px solid white';
+      window.hfPointerEl.style.borderRadius = '50%';
+      window.hfPointerEl.style.zIndex = '999999';
+      window.hfPointerEl.style.pointerEvents = 'none';
+      window.hfPointerEl.style.boxShadow = '0 0 15px rgba(0,0,0,0.4)';
+      window.hfPointerEl.style.transition = 'left 0.02s linear, top 0.02s linear';
+      document.body.appendChild(window.hfPointerEl);
     }
-    pointer.style.left = Math.max(10, Math.min(x, window.innerWidth - 40)) + 'px';
-    pointer.style.top = Math.max(10, Math.min(y, window.innerHeight - 40)) + 'px';
+    
+    window.hfLastKnownX = Math.max(15, Math.min(x, window.innerWidth - 45));
+    window.hfLastKnownY = Math.max(15, Math.min(y, window.innerHeight - 45));
+    window.hfPointerEl.style.left = window.hfLastKnownX + 'px';
+    window.hfPointerEl.style.top = window.hfLastKnownY + 'px';
   }
 
-  function launchVoiceEngine() {
+  // FIXED: Added array index parsing parameters to capture speech text without drops
+  function launchTabVoiceEngine() {
     if (!('webkitSpeechRecognition' in window)) return;
     
     recognition = new webkitSpeechRecognition();
@@ -181,40 +165,61 @@
 
     recognition.onresult = (event) => {
       if (!event.results || event.results.length <= event.resultIndex) return;
-      const textRow = event.results[event.resultIndex];
+      var textRow = event.results[event.resultIndex];
       if (!textRow || textRow.length === 0 || !textRow[0]) return;
       
-      // FIXED: Added [0] index accessor parameter to grab the true string data
-      const command = textRow[0].transcript.trim().toLowerCase();
-      console.log("🔊 Heard Command:", command);
+      var command = textRow[0].transcript.trim().toLowerCase();
+      var banner = document.getElementById('hfStatusBanner');
+      if (banner) banner.innerText = "🗣️ Heard: " + command;
 
       if (command.includes("down") || command.includes("scroll down")) {
         window.scrollBy({ top: 500, behavior: 'smooth' });
       } 
-      // Fixed: Backwards traversal voice handler
       else if (command.includes("up") || command.includes("scroll up")) {
         window.scrollBy({ top: -500, behavior: 'smooth' });
       } 
-      else if (command.includes("ok") || command.includes("okay") || command.includes("select") || command.includes("click")) {
-        if (pointer) {
-          const clickX = parseFloat(pointer.style.left) + 15;
-          const clickY = parseFloat(pointer.style.top) + 15;
-          
-          const target = document.elementFromPoint(clickX, clickY);
-          if (target) {
-            target.click();
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') target.focus();
+      else if (command.includes("yes") || command.includes("ok") || command.includes("okay") || command.includes("click")) {
+        if (window.hfPointerEl) {
+          var clickX = window.hfLastKnownX + 15;
+          var clickY = window.hfLastKnownY + 15;
+          var targetEl = document.elementFromPoint(clickX, clickY);
+          if (targetEl) {
+            targetEl.click();
+            if (targetEl.tagName === 'INPUT' || targetEl.tagName === 'TEXTAREA') targetEl.focus();
             
-            pointer.style.backgroundColor = '#00e676'; 
-            setTimeout(() => { if(pointer) pointer.style.backgroundColor = 'rgba(156, 39, 176, 0.9)'; }, 400);
+            window.hfPointerEl.style.backgroundColor = '#00e676'; 
+            setTimeout(() => { 
+              if(window.hfPointerEl) window.hfPointerEl.style.backgroundColor = 'rgba(156, 39, 176, 0.9)'; 
+            }, 400);
           }
         }
       }
     };
 
-    recognition.onerror = (e) => console.warn("Voice looping note:", e.error);
-    recognition.onend = () => { try { recognition.start(); } catch(e) {} };
+    recognition.onerror = (e) => {
+      if ((e.error === 'no-speech' || e.error === 'aborted') && recognition) {
+        try { recognition.start(); } catch(err) {}
+      }
+    };
+    
+    recognition.onend = () => { 
+      try { recognition.start(); } catch(e) {} 
+    };
     
     recognition.start();
   }
+
+  setInterval(() => {
+    var allLinks = document.querySelectorAll('a[target="_blank"]');
+    allLinks.forEach(function(link) {
+      link.setAttribute('target', '_self');
+    });
+  }, 1000);
+
 })();
+
+
+
+
+
+
