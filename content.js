@@ -1,76 +1,251 @@
-(function() {
-  if (window.hasHandsFreeRunActiveGlobal) return;
-  window.hasHandsFreeRunActiveGlobal = true;
+;(function () {
+  if (window.hfCleanup) {
+    try {
+      window.hfCleanup();
+    } catch (err) {}
+  }
+
+  var oldOverlay = document.getElementById("hfActivationOverlay");
+  if (oldOverlay) oldOverlay.remove();
+
+  var oldWidget = document.getElementById("hfWidgetContainer");
+  if (oldWidget) oldWidget.remove();
+
+  var oldPointer = document.getElementById("handsFreePointerGlobal");
+  if (oldPointer) oldPointer.remove();
 
   window.hfPointerEl = null;
   window.hfLastKnownX = 0;
   window.hfLastKnownY = 0;
+
   var trackingActive = false;
   var localStream = null;
   var recognition = null;
+  var isSpeechEngineRunning = false;
+  var startingRecognition = false;
+  var restartTimer = null;
+  var heartbeatTimer = null;
+  var disposed = false;
 
-  chrome.runtime.onMessage.addListener((request) => {
-    if (request.action === "LAUNCH_SYSTEM") {
-      injectFloatingWorkspace();
+  function cleanup() {
+    disposed = true;
+    trackingActive = false;
+
+    if (restartTimer !== null) {
+      clearTimeout(restartTimer);
+      restartTimer = null;
     }
-  });
 
-  async function injectFloatingWorkspace() {
-    if (document.getElementById('hfWidgetContainer')) return;
+    if (heartbeatTimer !== null) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
 
-    var container = document.createElement('div');
-    container.id = 'hfWidgetContainer';
-    container.style.position = 'fixed';
-    container.style.bottom = '20px';
-    container.style.right = '20px';
-    container.style.width = '180px';
-    container.style.height = '170px';
-    container.style.backgroundColor = '#202124';
-    container.style.border = '4px solid #9c27b0';
-    container.style.borderRadius = '14px';
-    container.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
-    container.style.zIndex = '999998';
-    container.style.overflow = 'hidden';
-    container.style.fontFamily = 'Arial, sans-serif';
+    if (recognition) {
+      recognition.onstart = null;
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
 
-    var header = document.createElement('div');
+      try {
+        recognition.abort();
+      } catch (err) {}
+
+      recognition = null;
+    }
+
+    isSpeechEngineRunning = false;
+    startingRecognition = false;
+
+    if (localStream) {
+      localStream.getTracks().forEach(function (track) {
+        track.stop();
+      });
+      localStream = null;
+    }
+
+    ["hfActivationOverlay", "hfWidgetContainer", "handsFreePointerGlobal"].forEach(function (id) {
+      var element = document.getElementById(id);
+      if (element) element.remove();
+    });
+
+    window.hfPointerEl = null;
+
+    if (
+      typeof chrome !== "undefined" &&
+      chrome.runtime &&
+      chrome.runtime.onMessage
+    ) {
+      try {
+        chrome.runtime.onMessage.removeListener(messageListener);
+      } catch (err) {}
+    }
+  }
+
+  window.hfCleanup = cleanup;
+
+  function messageListener(request) {
+    if (request && request.action === "LAUNCH_SYSTEM") {
+      injectActivationOverlay();
+    }
+  }
+
+  if (
+    typeof chrome !== "undefined" &&
+    chrome.runtime &&
+    chrome.runtime.onMessage
+  ) {
+    try {
+      chrome.runtime.onMessage.addListener(messageListener);
+    } catch (err) {
+      console.warn("Extension messaging unavailable:", err.message);
+    }
+  }
+
+  function injectActivationOverlay() {
+    if (
+      disposed ||
+      document.getElementById("hfActivationOverlay") ||
+      document.getElementById("hfWidgetContainer")
+    ) {
+      return;
+    }
+
+    var overlay = document.createElement("div");
+    overlay.id = "hfActivationOverlay";
+
+    Object.assign(overlay.style, {
+      position: "fixed",
+      top: "15px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      backgroundColor: "#ffffff",
+      border: "4px solid #9c27b0",
+      borderRadius: "30px",
+      padding: "12px 28px",
+      boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+      zIndex: "2147483646",
+      display: "flex",
+      alignItems: "center",
+      gap: "15px",
+      fontFamily: "Arial, sans-serif"
+    });
+
+    var txt = document.createElement("span");
+    txt.innerText = "🤖 Hands-Free Access Ready!";
+
+    Object.assign(txt.style, {
+      color: "#202124",
+      fontWeight: "bold",
+      fontSize: "14px"
+    });
+
+    var btn = document.createElement("button");
+    btn.innerText = "Initialize Accessibility Framework";
+
+    Object.assign(btn.style, {
+      backgroundColor: "#9c27b0",
+      color: "#ffffff",
+      border: "none",
+      padding: "8px 18px",
+      borderRadius: "20px",
+      cursor: "pointer",
+      fontWeight: "bold",
+      fontSize: "13px"
+    });
+
+    btn.addEventListener("click", function () {
+      overlay.remove();
+      initializeAllInOneSystem();
+    });
+
+    overlay.appendChild(txt);
+    overlay.appendChild(btn);
+    document.body.appendChild(overlay);
+  }
+
+  async function initializeAllInOneSystem() {
+    if (disposed || document.getElementById("hfWidgetContainer")) {
+      return;
+    }
+
+    if (
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
+      alert("Camera and microphone access is unavailable on this page. Try a regular HTTPS website.");
+      injectActivationOverlay();
+      return;
+    }
+
+    var container = document.createElement("div");
+    container.id = "hfWidgetContainer";
+
+    Object.assign(container.style, {
+      position: "fixed",
+      bottom: "20px",
+      right: "20px",
+      width: "180px",
+      height: "170px",
+      backgroundColor: "#202124",
+      border: "4px solid #9c27b0",
+      borderRadius: "14px",
+      boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+      zIndex: "2147483645",
+      overflow: "hidden",
+      fontFamily: "Arial, sans-serif"
+    });
+
+    var header = document.createElement("div");
     header.innerText = "📹 HANDS-FREE TRACKER ACTIVE";
-    header.style.color = '#ffffff';
-    header.style.backgroundColor = '#9c27b0';
-    header.style.fontSize = '9px';
-    header.style.fontWeight = 'bold';
-    header.style.textAlign = 'center';
-    header.style.padding = '5px 0';
 
-    var video = document.createElement('video');
-    video.id = 'hfWidgetVideo';
+    Object.assign(header.style, {
+      color: "#ffffff",
+      backgroundColor: "#9c27b0",
+      fontSize: "9px",
+      fontWeight: "bold",
+      textAlign: "center",
+      padding: "5px 0"
+    });
+
+    var video = document.createElement("video");
+    video.id = "hfWidgetVideo";
     video.autoplay = true;
     video.playsInline = true;
     video.muted = true;
-    video.style.width = '100%';
-    video.style.height = '110px';
-    video.style.transform = 'scaleX(-1)';
-    video.style.objectFit = 'cover';
 
-    var canvas = document.createElement('canvas');
-    canvas.id = 'hfWidgetCanvas';
-    canvas.style.position = 'absolute';
-    canvas.style.top = '18px';
-    canvas.style.left = '0';
-    canvas.style.width = '100%';
-    canvas.style.height = '110px';
-    canvas.style.transform = 'scaleX(-1)';
-    canvas.style.pointerEvents = 'none';
+    Object.assign(video.style, {
+      width: "100%",
+      height: "110px",
+      transform: "scaleX(-1)",
+      objectFit: "cover"
+    });
 
-    var statusBanner = document.createElement('div');
-    statusBanner.id = 'hfStatusBanner';
-    statusBanner.innerText = "🎙️ Listening for Down / Up / Yes...";
-    statusBanner.style.color = '#34a853';
-    statusBanner.style.backgroundColor = '#ffffff';
-    statusBanner.style.fontSize = '9px';
-    statusBanner.style.fontWeight = 'bold';
-    statusBanner.style.textAlign = 'center';
-    statusBanner.style.padding = '4px 0';
+    var canvas = document.createElement("canvas");
+    canvas.id = "hfWidgetCanvas";
+
+    Object.assign(canvas.style, {
+      position: "absolute",
+      top: "18px",
+      left: "0",
+      width: "100%",
+      height: "110px",
+      transform: "scaleX(-1)",
+      pointerEvents: "none"
+    });
+
+    var statusBanner = document.createElement("div");
+    statusBanner.id = "hfStatusBanner";
+    statusBanner.innerText = "🎙️ Initializing...";
+
+    Object.assign(statusBanner.style, {
+      color: "#34a853",
+      backgroundColor: "#ffffff",
+      fontSize: "9px",
+      fontWeight: "bold",
+      textAlign: "center",
+      padding: "4px 0"
+    });
 
     container.appendChild(header);
     container.appendChild(video);
@@ -78,32 +253,101 @@
     container.appendChild(statusBanner);
     document.body.appendChild(container);
 
-    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    var ctx = canvas.getContext("2d", {
+      willReadFrequently: true
+    });
 
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: { width: 180, height: 110 }
+        video: {
+          width: 180,
+          height: 110
+        }
       });
+
+      if (disposed || !container.isConnected) {
+        localStream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        localStream = null;
+        return;
+      }
+
       video.srcObject = localStream;
 
-      video.onloadedmetadata = () => {
+      video.onloadedmetadata = function () {
+        if (disposed || !video.videoWidth || !video.videoHeight) {
+          return;
+        }
+
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
+
         trackingActive = true;
         requestAnimationFrame(runTrackingFrameLoop);
+        launchTabVoiceEngine();
       };
 
-      function runTrackingFrameLoop() {
-        if (!trackingActive) return;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        var frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        var data = frame.data;
+      video.play().catch(function (err) {
+        console.warn("Video playback error:", err.message);
+      });
 
-        var totalX = 0, totalY = 0, count = 0;
-        for (var i = 0; i < data.length; i += 8) {
-          if (data[i] > 190 && data[i+1] > 190 && data[i+2] > 140) {
+      if (video.readyState >= 1) {
+        video.onloadedmetadata();
+      }
+
+    } catch (err) {
+      console.warn("Camera or microphone initialization failed:", err.message);
+
+      if (localStream) {
+        localStream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        localStream = null;
+      }
+
+      trackingActive = false;
+      container.remove();
+
+      if (!disposed) {
+        injectActivationOverlay();
+      }
+    }
+
+    function runTrackingFrameLoop() {
+      if (
+        disposed ||
+        !trackingActive ||
+        !video.videoWidth ||
+        !video.videoHeight
+      ) {
+        return;
+      }
+
+      try {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        var frame = ctx.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+        var data = frame.data;
+        var totalX = 0;
+        var totalY = 0;
+        var count = 0;
+
+        for (var i = 0; i < data.length; i += 32) {
+          if (
+            data[i] > 190 &&
+            data[i + 1] > 190 &&
+            data[i + 2] > 140
+          ) {
             var idx = i / 4;
+
             totalX += idx % canvas.width;
             totalY += Math.floor(idx / canvas.width);
             count++;
@@ -114,109 +358,266 @@
           var cx = totalX / count;
           var cy = totalY / count;
 
-          window.hfLastKnownX = Math.round((1 - (cx / canvas.width)) * window.innerWidth);
-          window.hfLastKnownY = Math.round((cy / canvas.height) * window.innerHeight);
+          window.hfLastKnownX = Math.round(
+            (1 - cx / canvas.width) * window.innerWidth
+          );
 
-          updateLivePointer(window.hfLastKnownX, window.hfLastKnownY);
+          window.hfLastKnownY = Math.round(
+            (cy / canvas.height) * window.innerHeight
+          );
+
+          updateLivePointer(
+            window.hfLastKnownX,
+            window.hfLastKnownY
+          );
         }
-        requestAnimationFrame(runTrackingFrameLoop);
+
+      } catch (err) {
+        console.warn("Tracking error:", err.message);
       }
 
-      launchTabVoiceEngine();
-
-    } catch (err) {
-      console.error(err);
-      container.remove();
-      alert("Hardware initialization prompt aborted. Reset permissions.");
+      requestAnimationFrame(runTrackingFrameLoop);
     }
   }
 
   function updateLivePointer(x, y) {
+    if (disposed) return;
+
     if (!window.hfPointerEl) {
-      window.hfPointerEl = document.createElement('div');
-      window.hfPointerEl.id = 'handsFreePointerGlobal';
-      window.hfPointerEl.style.position = 'fixed';
-      window.hfPointerEl.style.width = '30px';
-      window.hfPointerEl.style.height = '30px';
-      window.hfPointerEl.style.backgroundColor = 'rgba(156, 39, 176, 0.9)'; 
-      window.hfPointerEl.style.border = '4px solid white';
-      window.hfPointerEl.style.borderRadius = '50%';
-      window.hfPointerEl.style.zIndex = '999999';
-      window.hfPointerEl.style.pointerEvents = 'none';
-      window.hfPointerEl.style.boxShadow = '0 0 15px rgba(0,0,0,0.4)';
-      window.hfPointerEl.style.transition = 'left 0.02s linear, top 0.02s linear';
+      window.hfPointerEl = document.createElement("div");
+      window.hfPointerEl.id = "handsFreePointerGlobal";
+
+      Object.assign(window.hfPointerEl.style, {
+        position: "fixed",
+        width: "30px",
+        height: "30px",
+        backgroundColor: "rgba(156, 39, 176, 0.9)",
+        border: "4px solid white",
+        borderRadius: "50%",
+        zIndex: "2147483647",
+        pointerEvents: "none",
+        boxShadow: "0 0 15px rgba(0,0,0,0.4)",
+        transition: "left 0.02s linear, top 0.02s linear"
+      });
+
       document.body.appendChild(window.hfPointerEl);
     }
-    
-    window.hfLastKnownX = Math.max(15, Math.min(x, window.innerWidth - 45));
-    window.hfLastKnownY = Math.max(15, Math.min(y, window.innerHeight - 45));
-    window.hfPointerEl.style.left = window.hfLastKnownX + 'px';
-    window.hfPointerEl.style.top = window.hfLastKnownY + 'px';
+
+    window.hfLastKnownX = Math.max(
+      0,
+      Math.min(x, window.innerWidth - 38)
+    );
+
+    window.hfLastKnownY = Math.max(
+      0,
+      Math.min(y, window.innerHeight - 38)
+    );
+
+    window.hfPointerEl.style.left =
+      window.hfLastKnownX + "px";
+
+    window.hfPointerEl.style.top =
+      window.hfLastKnownY + "px";
   }
 
-  // FIXED: Added array index parsing parameters to capture speech text without drops
   function launchTabVoiceEngine() {
-    if (!('webkitSpeechRecognition' in window)) return;
-    
-    recognition = new webkitSpeechRecognition();
+    var SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setStatus("⚠️ Speech recognition unsupported");
+      return;
+    }
+
+    if (disposed || recognition) return;
+
+    recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = false;
-    recognition.lang = 'en-US';
+    recognition.lang = "en-US";
 
-    recognition.onresult = (event) => {
-      if (!event.results || event.results.length <= event.resultIndex) return;
-      var textRow = event.results[event.resultIndex];
-      if (!textRow || textRow.length === 0 || !textRow[0]) return;
-      
-      var command = textRow[0].transcript.trim().toLowerCase();
-      var banner = document.getElementById('hfStatusBanner');
-      if (banner) banner.innerText = "🗣️ Heard: " + command;
+    recognition.onstart = function () {
+      isSpeechEngineRunning = true;
+      startingRecognition = false;
+      setStatus("🎙️ Listening for Up / Down / Click");
+    };
 
-      if (command.includes("down") || command.includes("scroll down")) {
-        window.scrollBy({ top: 500, behavior: 'smooth' });
-      } 
-      else if (command.includes("up") || command.includes("scroll up")) {
-        window.scrollBy({ top: -500, behavior: 'smooth' });
-      } 
-      else if (command.includes("yes") || command.includes("ok") || command.includes("okay") || command.includes("click")) {
+    recognition.onresult = function (event) {
+      if (!event.results || event.resultIndex >= event.results.length) {
+        return;
+      }
+
+      var result = event.results[event.resultIndex];
+
+      if (!result || !result[0]) return;
+
+      var command = (result[0].transcript || "")
+        .trim()
+        .toLowerCase();
+
+      if (!command) return;
+
+      setStatus("🗣️ Heard: " + command);
+
+      if (
+        command === "down" ||
+        command.includes("scroll down")
+      ) {
+        window.scrollBy({
+          top: 500,
+          behavior: "smooth"
+        });
+
+      } else if (
+        command === "up" ||
+        command.includes("scroll up")
+      ) {
+        window.scrollBy({
+          top: -500,
+          behavior: "smooth"
+        });
+
+      } else if (
+        /\b(yes|okay|ok|click)\b/.test(command)
+      ) {
         if (window.hfPointerEl) {
-          var clickX = window.hfLastKnownX + 15;
-          var clickY = window.hfLastKnownY + 15;
-          var targetEl = document.elementFromPoint(clickX, clickY);
-          if (targetEl) {
+          var targetEl = document.elementFromPoint(
+            window.hfLastKnownX + 15,
+            window.hfLastKnownY + 15
+          );
+
+          if (
+            targetEl &&
+            !targetEl.closest("#hfWidgetContainer") &&
+            !targetEl.closest("#hfActivationOverlay")
+          ) {
             targetEl.click();
-            if (targetEl.tagName === 'INPUT' || targetEl.tagName === 'TEXTAREA') targetEl.focus();
-            
-            window.hfPointerEl.style.backgroundColor = '#00e676'; 
-            setTimeout(() => { 
-              if(window.hfPointerEl) window.hfPointerEl.style.backgroundColor = 'rgba(156, 39, 176, 0.9)'; 
+
+            if (
+              targetEl.tagName === "INPUT" ||
+              targetEl.tagName === "TEXTAREA"
+            ) {
+              targetEl.focus();
+            }
+
+            window.hfPointerEl.style.backgroundColor = "#00e676";
+
+            setTimeout(function () {
+              if (window.hfPointerEl) {
+                window.hfPointerEl.style.backgroundColor =
+                  "rgba(156, 39, 176, 0.9)";
+              }
             }, 400);
           }
         }
       }
     };
 
-    recognition.onerror = (e) => {
-      if ((e.error === 'no-speech' || e.error === 'aborted') && recognition) {
-        try { recognition.start(); } catch(err) {}
+    recognition.onerror = function (event) {
+      isSpeechEngineRunning = false;
+      startingRecognition = false;
+
+      if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
+        setStatus("⚠️ Microphone permission denied");
+        return;
       }
+
+      if (event.error === "audio-capture") {
+        setStatus("⚠️ No microphone detected");
+        return;
+      }
+
+      if (event.error !== "aborted") {
+        setStatus("🎙️ Restarting voice recognition...");
+      }
+
+      restartVoiceSafely();
     };
-    
-    recognition.onend = () => { 
-      try { recognition.start(); } catch(e) {} 
+
+    recognition.onend = function () {
+      isSpeechEngineRunning = false;
+      startingRecognition = false;
+      restartVoiceSafely();
     };
-    
-    recognition.start();
+
+    startRecognitionSafely();
   }
 
-  setInterval(() => {
-    var allLinks = document.querySelectorAll('a[target="_blank"]');
-    allLinks.forEach(function(link) {
-      link.setAttribute('target', '_self');
+  function setStatus(message) {
+    var banner = document.getElementById("hfStatusBanner");
+
+    if (banner) {
+      banner.innerText = message;
+    }
+  }
+
+  function startRecognitionSafely() {
+    if (
+      disposed ||
+      !trackingActive ||
+      !recognition ||
+      isSpeechEngineRunning ||
+      startingRecognition
+    ) {
+      return;
+    }
+
+    startingRecognition = true;
+
+    try {
+      recognition.start();
+    } catch (err) {
+      startingRecognition = false;
+      restartVoiceSafely();
+    }
+  }
+
+  function restartVoiceSafely() {
+    if (
+      disposed ||
+      !trackingActive ||
+      !recognition ||
+      isSpeechEngineRunning ||
+      startingRecognition ||
+      restartTimer !== null
+    ) {
+      return;
+    }
+
+    restartTimer = setTimeout(function () {
+      restartTimer = null;
+      startRecognitionSafely();
+    }, 1200);
+  }
+
+  heartbeatTimer = setInterval(function () {
+    if (disposed) return;
+
+    document.querySelectorAll('a[target="_blank"]').forEach(function (link) {
+      link.setAttribute("target", "_self");
     });
+
+    restartVoiceSafely();
   }, 1000);
 
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      injectActivationOverlay,
+      { once: true }
+    );
+  } else {
+    injectActivationOverlay();
+  }
 })();
+
+
+
+
 
 
 
